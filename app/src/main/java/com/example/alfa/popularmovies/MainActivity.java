@@ -1,5 +1,6 @@
 package com.example.alfa.popularmovies;
 
+import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -77,6 +78,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Lis
 
     }
 
+
     // private class MoviesAdaptr
 
     private void loadMovies() {
@@ -87,18 +89,27 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Lis
         else if (getType.equals(getString(R.string.pref_top)))
             call2 = mInterface.getTopMovies();
 
-        if( call2 != null) {
+        if (call2 != null) {
+            final ProgressDialog progressDialog;
+            progressDialog = new ProgressDialog(MainActivity.this);
+            progressDialog.setMessage(getString(R.string.progress_message));
+            progressDialog.setMax(3);
+            progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+            progressDialog.show();
             call2.enqueue(new Callback<MoviesList>() {
                 @Override
                 public void onResponse(@NonNull Call<MoviesList> call, @NonNull Response<MoviesList> response) {
                     //noinspection ConstantConditions
                     moviesList = response.body().getResults();
                     mMoviesAdapter.loadData(moviesList);
-
+                    progressDialog.dismiss();
                 }
 
                 @Override
                 public void onFailure(@NonNull Call<MoviesList> call, @NonNull Throwable t) {
+                    progressDialog.dismiss();
+
+
                     AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                     builder.setMessage("There was a problem in connection")
                             .setCancelable(false)
