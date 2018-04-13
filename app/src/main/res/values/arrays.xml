@@ -3,10 +3,14 @@
     <array name="pref_options">
         <item>@string/pref_popular</item>
         <item>@string/pref_top</item>
+        <item>@string/pref_favourite</item>
+
     </array>
 
     <array name="pref_options_val">
     <item>@string/pref_popular_val</item>
     <item>@string/pref_top_val</item>
+        <item>@string/pref_favourite_val</item>
 </array>
+
 </resources>

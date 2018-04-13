@@ -4,7 +4,8 @@
     package="com.example.alfa.popularmovies">
 
     <uses-permission android:name="android.permission.INTERNET" />
-
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <application
         android:allowBackup="true"
         android:fullBackupContent="@xml/backup_descriptor"
@@ -33,6 +34,11 @@
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value=".MainActivity"> </meta-data> </activity>
+        <provider
+            android:name="com.example.alfa.popularmovies.data.MoviesContentProvider"
+            android:authorities="com.example.alfa.popularmovies"
+            android:exported="false">
+        </provider>
     </application>
 
 </manifest>

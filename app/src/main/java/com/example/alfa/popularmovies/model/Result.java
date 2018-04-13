@@ -12,25 +12,57 @@ public class Result implements Parcelable {
 
     @SerializedName("original_title")
     @Expose
-    private final String originalTitle ;
+    private  String originalTitle;
 
     @SerializedName("poster_path")
     @Expose
-    private final String posterPath ;
+    private  String posterPath;
+
+    public void setOriginalTitle(String originalTitle) {
+        this.originalTitle = originalTitle;
+    }
+
+    public void setPosterPath(String posterPath) {
+        this.posterPath = posterPath;
+    }
+
+    public void setOverview(String overview) {
+        this.overview = overview;
+    }
+
+    public void setVoteAverage(Double voteAverage) {
+        this.voteAverage = voteAverage;
+    }
+
+    public void setReleaseDate(String releaseDate) {
+        this.releaseDate = releaseDate;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
 
     @SerializedName("overview")
     @Expose
-    private final String overview ;
+
+    private  String overview;
     @SerializedName("vote_average")
     @Expose
-    private final Double voteAverage ;
+    private  Double voteAverage;
 
     @SerializedName("release_date")
     @Expose
-    private final String releaseDate ;
+    private  String releaseDate;
+    @SerializedName("id")
+    @Expose
+    private Integer id;
 
 
-    private Result(Parcel in) {
+    public Result()  {
+        super();
+    }
+    public Result(Parcel in) {
+        id = in.readInt();
         originalTitle = in.readString();
         posterPath = in.readString();
         overview = in.readString();
@@ -51,6 +83,11 @@ public class Result implements Parcelable {
             return new Result[size];
         }
     };
+
+
+    public Integer getId() {
+        return id;
+    }
 
     public Double getVoteAverage() {
         return voteAverage;
@@ -82,6 +119,7 @@ public class Result implements Parcelable {
 
     @Override
     public void writeToParcel(Parcel parcel, int i) {
+        parcel.writeInt(id);
         parcel.writeString(originalTitle);
         parcel.writeString(posterPath);
         parcel.writeString(overview);

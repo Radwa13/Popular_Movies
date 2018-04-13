@@ -9,6 +9,8 @@
     <string name="pref_label">Sort Movies by</string>
     <string name="pref_popular" translatable="false">Popular Movies</string>
     <string name="pref_top" translatable="false">Top rated Movies</string>
+    <string name="pref_favourite" translatable="false">Favourites Movies</string>
+    <string name="pref_favourite_val" >Favourites Movies</string>
     <string name="pref_popular_val">Popular Movies</string>
     <string name="pref_top_val">Top rated Movies</string>
     <string name="image_desc">Movie poster</string>
