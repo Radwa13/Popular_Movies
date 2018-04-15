@@ -12,6 +12,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import static com.example.alfa.popularmovies.data.MoviesContract.AUTHORITY;
+import static com.example.alfa.popularmovies.data.MoviesContract.MovieEntry.COLUMN_NAME_ID;
 import static com.example.alfa.popularmovies.data.MoviesContract.MovieEntry.TABLE_NAME;
 import static com.example.alfa.popularmovies.data.MoviesContract.PATH;
 
@@ -70,7 +71,7 @@ public class MoviesContentProvider extends ContentProvider {
     @Nullable
     @Override
     public Uri insert(@NonNull Uri uri, @Nullable ContentValues values) {
-        SQLiteDatabase db = mFavouritesDbHelper.getWritableDatabase();
+      final   SQLiteDatabase db = mFavouritesDbHelper.getWritableDatabase();
         int val = sUriMatcher.match(uri);
         Uri returnUri;
         switch (val) {
@@ -93,9 +94,26 @@ public class MoviesContentProvider extends ContentProvider {
 
     @Override
     public int delete(@NonNull Uri uri, @Nullable String selection, @Nullable String[] selectionArgs) {
-        return 0;
-    }
+        final SQLiteDatabase db = mFavouritesDbHelper.getWritableDatabase();
+        int val = sUriMatcher.match(uri);
+        int tasksDeleted ;
+        switch (val) {
+            case MOVIE_WITH_ID:
 
+                String id = uri.getPathSegments().get(1);
+                 tasksDeleted = db.delete(TABLE_NAME, COLUMN_NAME_ID+"= ?;", new String[]{id});
+
+                break;
+            default:
+                throw new UnsupportedOperationException("Unknown uri: " + uri);
+
+        }
+        if(tasksDeleted!=0){
+            getContext().getContentResolver().notifyChange(uri,null);
+        }
+        return tasksDeleted;
+
+    }
     @Override
     public int update(@NonNull Uri uri, @Nullable ContentValues values, @Nullable String selection, @Nullable String[] selectionArgs) {
         return 0;

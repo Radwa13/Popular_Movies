@@ -80,13 +80,13 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Lis
                 .addConverterFactory(GsonConverterFactory.create())
                 .addCallAdapterFactory(RxJava2CallAdapterFactory.createWithScheduler(Schedulers.io()))
                 .build();
-        GridLayoutManager gridLayoutManager = new GridLayoutManager(
-                this, 2);
-
+//        GridLayoutManager gridLayoutManager = new GridLayoutManager(
+//                this, 2);
+        AdroitGridLayout gridLayout=new AdroitGridLayout(this,500);
         mInterface = retrofit.create(MoviesInterface.class);
 
 
-        mRecyclerView.setLayoutManager(gridLayoutManager);
+        mRecyclerView.setLayoutManager(gridLayout);
         mRecyclerView.setHasFixedSize(true);
         mMoviesAdapter = new MoviesAdapter(this, this);
         mRecyclerView.setAdapter(mMoviesAdapter);
@@ -301,10 +301,11 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Lis
 
     @Override
     public void onLoadFinished(@NonNull Loader<Cursor> loader, Cursor cursor) {
-        Result result = new Result();
         mMoviesList=new ArrayList<Result>();
 
         while (cursor.moveToNext()) {
+            Result result = new Result();
+
             result.setId(cursor.getInt(cursor.getColumnIndex(MoviesContract.MovieEntry.COLUMN_NAME_ID)));
             result.setOriginalTitle(cursor.getString(cursor.getColumnIndex(MoviesContract.MovieEntry.COLUMN_NAME_TITLE)));
             result.setPosterPath(cursor.getString(cursor.getColumnIndex(MoviesContract.MovieEntry.COLUMN_NAME_POSTER_PATH)));

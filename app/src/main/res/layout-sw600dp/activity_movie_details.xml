@@ -144,7 +144,7 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="@+id/poster_Iv"
                 app:layout_constraintTop_toBottomOf="@+id/textView7"
-                app:srcCompat="@drawable/star" />
+                app:srcCompat="@drawable/unstar" />
         </android.support.constraint.ConstraintLayout>
     </ScrollView>
     <TextView

@@ -55,7 +55,6 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MoviesView
     @Override
     public void onBindViewHolder(@NonNull MoviesViewHolder holder, int position) {
 //
-        SharedPreferences sharedPreferences = null;
 
         String getType = MainActivity.sharedPreferences.getString(mContext.getString(R.string.pref_key), mContext.getString(R.string.pref_popular));
         if (getType.equals(mContext.getString(R.string.pref_favourite))) {

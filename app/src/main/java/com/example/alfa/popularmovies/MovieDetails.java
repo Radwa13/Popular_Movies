@@ -4,6 +4,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.Intent;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.databinding.DataBindingUtil;
 import android.graphics.Bitmap;
@@ -41,13 +42,15 @@ import java.io.IOException;
 
 import static com.example.alfa.popularmovies.NetworkUtils.BASE_URL_POSTER;
 import static com.example.alfa.popularmovies.data.MoviesContract.MovieEntry;
+import static com.example.alfa.popularmovies.data.MoviesContract.MovieEntry.COLUMN_NAME_ID;
+import static com.example.alfa.popularmovies.data.MoviesContract.MovieEntry.CONTENT_URI;
 
 
 public class MovieDetails extends AppCompatActivity {
     private TextView titleTv, overviewTv, ratingTv, dateTv;
     private ImageView posterIv, favoriteIv;
     private ListView mTrailersListView, mReviewsListView;
-
+boolean isExist;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -61,25 +64,52 @@ public class MovieDetails extends AppCompatActivity {
         Result movie = intent.getParcelableExtra("movie");
         ReviewList reviewList = intent.getParcelableExtra("reviews");
         VideoList videoList = intent.getParcelableExtra("videos");
+        isExist=isExist(movie);
+        if(isExist){
+            favoriteIv.setBackgroundResource(R.drawable.star);
+
+        }
         titleTv.setText(movie.getOriginalTitle());
         overviewTv.setText(movie.getOverview());
         ratingTv.setText(String.valueOf(movie.getVoteAverage()));
         dateTv.setText(movie.getReleaseDate());
+        String getType = MainActivity.sharedPreferences.getString(getString(R.string.pref_key), getString(R.string.pref_popular));
+        if (getType.equals(getString(R.string.pref_favourite))) {
+
+            File f = new File( movie.getPosterPath());
+            Bitmap b = null;
+            try {
+                b = BitmapFactory.decodeStream(new FileInputStream(f));
+                posterIv.setImageBitmap(b);
+
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+        else {
         Picasso.with(this)
                 .load(BASE_URL_POSTER + movie.getPosterPath())
-                .into(posterIv);
+                .into(posterIv);}
         favoriteIv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                addToFavourite(movie);
+                if (!isExist(movie)) {
+                    addToFavourite(movie);
+                    favoriteIv.setBackgroundResource(R.drawable.star);
 
-                favoriteIv.setBackgroundResource(R.drawable.star);
+                } else {
+                    favoriteIv.setBackgroundResource(R.drawable.unstar);
+
+                    removeFromFavourites(movie.getId());
+                    Toast.makeText(MovieDetails.this, "movie removed from favourites", Toast.LENGTH_LONG).show();
+                }
+
             }
         });
-        Reviews adapter = new Reviews(this, reviewList);
-        mReviewsListView.setAdapter(adapter);
-        Trailers adapters = new Trailers(this, videoList);
-        mTrailersListView.setAdapter(adapters);
+//        Reviews adapter = new Reviews(this, reviewList);
+//        mReviewsListView.setAdapter(adapter);
+//        Trailers adapters = new Trailers(this, videoList);
+//        mTrailersListView.setAdapter(adapters);
     }
 
     private void initializeUI() {
@@ -111,18 +141,29 @@ public class MovieDetails extends AppCompatActivity {
 
 
         ContentValues cv = new ContentValues();
-        cv.put(MovieEntry.COLUMN_NAME_ID, movie.getId());
+        cv.put(COLUMN_NAME_ID, movie.getId());
         cv.put(MovieEntry.COLUMN_NAME_TITLE, movie.getOriginalTitle());
         cv.put(MovieEntry.COLUMN_NAME_POSTER_PATH, saveToInternalStorage(poster, movie.getPosterPath()));
         cv.put(MovieEntry.COLUMN_NAME_OVERVIEW, movie.getOverview());
         cv.put(MovieEntry.COLUMN_NAME_VOTE_AVERAGE, movie.getVoteAverage());
         cv.put(MovieEntry.COLUMN_NAME_RELEASE_DATE, movie.getId());
 
-        Uri uri = getContentResolver().insert(MovieEntry.CONTENT_URI, cv);
+        Uri uri = getContentResolver().insert(CONTENT_URI, cv);
 
         if (uri != null) {
             Toast.makeText(this, "movie added to favourites", Toast.LENGTH_LONG).show();
         }
+    }
+
+    private void removeFromFavourites(int id) {
+
+        String stringId = Integer.toString(id);
+        Uri uri = CONTENT_URI;
+        uri = uri.buildUpon().appendPath(stringId).build();
+
+        getContentResolver().delete(uri, COLUMN_NAME_ID, new String[]{String.valueOf(id)});
+
+
     }
 
     private String saveToInternalStorage(Bitmap bitmapImage, String name) {
@@ -222,5 +263,12 @@ public class MovieDetails extends AppCompatActivity {
             reviewTv.setText(mDataSource.getResults().get(position).getContent());
             return rowView;
         }
+    }
+
+    private boolean isExist(Result movie) {
+        Cursor c = getContentResolver().query(CONTENT_URI, null, COLUMN_NAME_ID + " = " + movie.getId(), null, null);
+        if (c.getCount() == 0) {
+            return false;
+        } else return true;
     }
 }
