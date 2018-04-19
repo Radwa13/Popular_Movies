@@ -4,14 +4,9 @@ import com.example.alfa.popularmovies.model.MoviesList;
 import com.example.alfa.popularmovies.model.ReviewList;
 import com.example.alfa.popularmovies.model.VideoList;
 
-import io.reactivex.Flowable;
 import io.reactivex.Observable;
-import retrofit2.Call;
 import retrofit2.http.GET;
-import retrofit2.http.PATCH;
-import retrofit2.http.Part;
 import retrofit2.http.Path;
-import retrofit2.http.Query;
 
 @SuppressWarnings("DefaultFileTemplate")
 interface MoviesInterface {

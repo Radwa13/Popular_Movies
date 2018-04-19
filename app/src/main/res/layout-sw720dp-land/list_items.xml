@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="330dp"
     android:contentDescription="@string/image_desc"
-    android:padding="5dp"
+    android:padding="3dp"
     android:scaleType="fitXY"
     android:id="@+id/moviePosterIV"/>
 </layout>

@@ -1,6 +1,5 @@
 package com.example.alfa.popularmovies;
 
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
@@ -15,16 +14,10 @@ import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.preference.PreferenceManager;
-import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.BaseAdapter;
 import android.widget.Toast;
 
 import com.example.alfa.popularmovies.data.FavouritesDbHelper;
@@ -34,9 +27,7 @@ import com.example.alfa.popularmovies.model.MoviesList;
 import com.example.alfa.popularmovies.model.Result;
 import com.example.alfa.popularmovies.model.Review;
 import com.example.alfa.popularmovies.model.ReviewAndVideos;
-import com.example.alfa.popularmovies.model.ReviewList;
 import com.example.alfa.popularmovies.model.Video;
-import com.example.alfa.popularmovies.model.VideoList;
 import com.jakewharton.retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 
 
@@ -44,8 +35,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.reactivex.Observable;
-import io.reactivex.functions.BiFunction;
-import io.reactivex.functions.Function;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
@@ -61,29 +50,20 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Lis
     public static SharedPreferences sharedPreferences;
     private final String STATE_KEY = "key";
     private ArrayList<Result> mMoviesList;
-    private ArrayList<Review> mReviewsList;
-    private ArrayList<Video> mVideoList;
     private static final int Movie_LOADER_ID = 1;
-    Bundle mBundle;
-    Result movie;
+    private Bundle mBundle;
+    private Result movie;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Retrofit retrofit;
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         initializeUi();
         setupSharedPreferences();
-        retrofit = new Retrofit.Builder()
-                .baseUrl(BASE_URL)
-                .addConverterFactory(GsonConverterFactory.create())
-                .addCallAdapterFactory(RxJava2CallAdapterFactory.createWithScheduler(Schedulers.io()))
-                .build();
-//        GridLayoutManager gridLayoutManager = new GridLayoutManager(
-//                this, 2);
-        AdroitGridLayout gridLayout=new AdroitGridLayout(this,500);
-        mInterface = retrofit.create(MoviesInterface.class);
+
+        AdroitGridLayout gridLayout=new AdroitGridLayout(this);
+        mInterface = RetrofitClient.getClient().create(MoviesInterface.class);
 
 
         mRecyclerView.setLayoutManager(gridLayout);
@@ -98,7 +78,6 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Lis
         } else {
             loadMovies();
         }
-        //  loadWeatherData();
     }
 
 
@@ -118,13 +97,16 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Lis
         if (getType.equals(getString(R.string.pref_popular))) {
             mInterface.getPopularMovies().observeOn(AndroidSchedulers.mainThread())
                     .subscribeOn(Schedulers.io())
+                    .retry(3)
                     .subscribe(this::handleResponse, this::handleError);
         } else if (getType.equals(getString(R.string.pref_top))) {
             mInterface.getTopMovies().observeOn(AndroidSchedulers.mainThread())
                     .subscribeOn(Schedulers.io())
+                    .retry(3)
                     .subscribe(this::handleResponse, this::handleError);
+
         } else if (getType.equals(getString(R.string.pref_favourite))) {
-            loadWeatherData();
+            loadFavouriteMovies();
         }
     }
 
@@ -135,16 +117,6 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Lis
     }
 
 
-    private void handleResponses(ReviewAndVideos reviewAndVideos) {
-
-        Intent intent = new Intent(MainActivity.this, MovieDetails.class);
-
-        intent.putExtra("movie", movie);
-
-        intent.putExtra("videos", reviewAndVideos.getVideoList());
-        intent.putExtra("reviews", reviewAndVideos.getReviewList());
-        startActivity(intent);
-    }
 
     private void handleError(Throwable error) {
 
@@ -187,38 +159,13 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Lis
     public void onClick(int position, List<Result> movies) {
         movie = movies.get(position);
 
-        loadReviewAndTrailer(movie.getId());
 
+        Intent intent = new Intent(MainActivity.this, MovieDetails.class);
+
+        intent.putExtra("movie", movie);
+        startActivity(intent);
     }
 
-    private void loadReviewAndTrailer(int id) {
-
-
-        Observable.zip(mInterface.getReview(id), mInterface.getTrailer(id), new BiFunction<ReviewList, VideoList,ReviewAndVideos>() {
-                    @Override
-                    public ReviewAndVideos apply(ReviewList reviewList, VideoList videoList) throws Exception {
-                        ReviewAndVideos reviewAndVideos=new ReviewAndVideos();
-//                        mReviewsList = reviewList.getResults();
-//                        mVideoList = videoList.getResults();
-                        reviewAndVideos.setReviewList(reviewList);
-                        reviewAndVideos.setVideoList(videoList);
-                        return  reviewAndVideos;
-                    }
-                }).observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.io())
-                .subscribe(this::handleResponses, this::handleError);
-
-
-
-//            @Override
-//            public VideoList apply(ReviewList s, VideoList s2) throws Exception {
-//                mReviewsList = s.getResults();
-//                mVideoList = s2.getResults();
-//                return mVideoList;
-//            }
-//        }).observeOn(AndroidSchedulers.mainThread()).subscribeOn(Schedulers.io())
-//                .subscribe(this::handleResponse3, this::handleError);
-    }
 
 
     private  void setupSharedPreferences() {
@@ -260,6 +207,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Lis
             mMoviesList.add(result);
 
         }
+        cursor.close();
         db.close();
         mMoviesAdapter.loadData(mMoviesList);
 
@@ -280,8 +228,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Lis
                 try {
                     mBundle = bundle;
 
-                    Cursor c = getContentResolver().query(MoviesContract.MovieEntry.CONTENT_URI, null, null, null, MoviesContract.MovieEntry.COLUMN_NAME_ID);
-                    return c;
+                    return getContentResolver().query(MoviesContract.MovieEntry.CONTENT_URI, null, null, null, MoviesContract.MovieEntry.COLUMN_NAME_ID);
                 }
                 /*
 
@@ -301,7 +248,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Lis
 
     @Override
     public void onLoadFinished(@NonNull Loader<Cursor> loader, Cursor cursor) {
-        mMoviesList=new ArrayList<Result>();
+        mMoviesList= new ArrayList<>();
 
         while (cursor.moveToNext()) {
             Result result = new Result();
@@ -326,7 +273,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Lis
 
     }
 
-    private void loadWeatherData() {
+    private void loadFavouriteMovies() {
         android.support.v4.app.LoaderManager loaderManager = getSupportLoaderManager();
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            Loader loader = loaderManager.getLoader(Movie_LOADER_ID);
         if (loader == null) {

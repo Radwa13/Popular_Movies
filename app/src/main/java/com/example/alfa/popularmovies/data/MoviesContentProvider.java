@@ -17,10 +17,6 @@ import static com.example.alfa.popularmovies.data.MoviesContract.MovieEntry.TABL
 import static com.example.alfa.popularmovies.data.MoviesContract.PATH;
 
 
-/**
- * Created by Alfa on 3/26/2018.
- */
-
 public class MoviesContentProvider extends ContentProvider {
     public static final int MOVIES = 100;
     public static final int MOVIE_WITH_ID = 101;
@@ -77,7 +73,7 @@ public class MoviesContentProvider extends ContentProvider {
         switch (val) {
             case MOVIES:
                 long id = db.insert(TABLE_NAME, null, values);
-                if (id > 1) {
+                if (id > 0) {
 
                     returnUri = ContentUris.withAppendedId(uri, id);
                 } else {

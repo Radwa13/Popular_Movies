@@ -3,14 +3,10 @@ package com.example.alfa.popularmovies.data;
 import android.net.Uri;
 import android.provider.BaseColumns;
 
-/**
- * Created by Alfa on 3/26/2018.
- */
-
 public class MoviesContract {
-    public static final String AUTHORITY="com.example.alfa.popularmovies";
-    public static final Uri BASE_CONTENT_URI=Uri.parse("content://"+AUTHORITY);
-    public static final String PATH="favourites";
+    protected static final String AUTHORITY="com.example.alfa.popularmovies";
+    protected static final Uri BASE_CONTENT_URI=Uri.parse("content://"+AUTHORITY);
+    protected static final String PATH="favourites";
 
     public static final class MovieEntry implements BaseColumns{
         public static final Uri CONTENT_URI=BASE_CONTENT_URI.buildUpon().appendEncodedPath(PATH).build();

@@ -3,19 +3,14 @@ package com.example.alfa.popularmovies;
 import android.content.Context;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.AttributeSet;
 import android.util.TypedValue;
 
-/**
- * Created by Alfa on 4/13/2018.
- */
-
-public class AdroitGridLayout extends GridLayoutManager {
+class AdroitGridLayout extends GridLayoutManager {
     private int mColumnWidth;
     private boolean mColumnWidthChanged = true;
-    public AdroitGridLayout(Context context, int columnWidth) {
+    public AdroitGridLayout(Context context) {
         super(context,  1);
-        setColumnWidth(checkColumnWidth(context, columnWidth));
+        setColumnWidth(checkColumnWidth(context, 500));
 
     }
     /* Initially set spanCount to 1, will be changed automatically later. */

@@ -4,8 +4,8 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.databinding.DataBindingUtil;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -25,13 +25,14 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.alfa.popularmovies.data.FavouritesDbHelper;
 import com.example.alfa.popularmovies.databinding.ActivityMovieDetailsBinding;
 import com.example.alfa.popularmovies.databinding.ReviewItemBinding;
 import com.example.alfa.popularmovies.databinding.TrailersItemsBinding;
 import com.example.alfa.popularmovies.model.Result;
+import com.example.alfa.popularmovies.model.ReviewAndVideos;
 import com.example.alfa.popularmovies.model.ReviewList;
 import com.example.alfa.popularmovies.model.VideoList;
+import com.jakewharton.retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import com.squareup.picasso.Picasso;
 
 import java.io.File;
@@ -39,7 +40,15 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.List;
 
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+
+import static com.example.alfa.popularmovies.NetworkUtils.BASE_URL;
 import static com.example.alfa.popularmovies.NetworkUtils.BASE_URL_POSTER;
 import static com.example.alfa.popularmovies.data.MoviesContract.MovieEntry;
 import static com.example.alfa.popularmovies.data.MoviesContract.MovieEntry.COLUMN_NAME_ID;
@@ -49,8 +58,19 @@ import static com.example.alfa.popularmovies.data.MoviesContract.MovieEntry.CONT
 public class MovieDetails extends AppCompatActivity {
     private TextView titleTv, overviewTv, ratingTv, dateTv;
     private ImageView posterIv, favoriteIv;
-    private ListView mTrailersListView, mReviewsListView;
-boolean isExist;
+    private boolean isExist;
+    ListView mReviewsListView;
+    ListView mTrailersListView;
+    private Reviews reviewsAdapter;
+    private Trailers trailersAdapter;
+   private ReviewList reviewList ;
+    private VideoList videoList ;
+    private MoviesInterface mInterface;
+    private final String REVIEW_KEY = "rKey";
+    private final String VIDEO_KEY = "vKey";
+    TextView trailers,reviews;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -62,10 +82,21 @@ boolean isExist;
         initializeUI();
         Intent intent = getIntent();
         Result movie = intent.getParcelableExtra("movie");
-        ReviewList reviewList = intent.getParcelableExtra("reviews");
-        VideoList videoList = intent.getParcelableExtra("videos");
-        isExist=isExist(movie);
-        if(isExist){
+
+
+        if (savedInstanceState != null && savedInstanceState.containsKey(REVIEW_KEY)&& savedInstanceState.containsKey(VIDEO_KEY)) {
+            videoList = savedInstanceState.getParcelable(VIDEO_KEY);
+             reviewList = savedInstanceState.getParcelable(REVIEW_KEY);
+            reviewsAdapter = new Reviews(this,reviewList);
+            trailersAdapter  = new Trailers(this, videoList);
+            mTrailersListView.setAdapter(trailersAdapter);
+            mReviewsListView.setAdapter(reviewsAdapter);
+
+        }
+        else {
+        loadReviewAndTrailer(movie.getId());}
+        isExist = isExist(movie);
+        if (isExist) {
             favoriteIv.setBackgroundResource(R.drawable.star);
 
         }
@@ -75,8 +106,12 @@ boolean isExist;
         dateTv.setText(movie.getReleaseDate());
         String getType = MainActivity.sharedPreferences.getString(getString(R.string.pref_key), getString(R.string.pref_popular));
         if (getType.equals(getString(R.string.pref_favourite))) {
+mReviewsListView.setVisibility(View.GONE);
+mTrailersListView.setVisibility(View.GONE);
+trailers.setVisibility(View.GONE);
+reviews.setVisibility(View.GONE);
 
-            File f = new File( movie.getPosterPath());
+            File f = new File(movie.getPosterPath());
             Bitmap b = null;
             try {
                 b = BitmapFactory.decodeStream(new FileInputStream(f));
@@ -85,31 +120,26 @@ boolean isExist;
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             }
+        } else {
+            Picasso.with(this)
+                    .load(BASE_URL_POSTER + movie.getPosterPath())
+                    .into(posterIv);
         }
-        else {
-        Picasso.with(this)
-                .load(BASE_URL_POSTER + movie.getPosterPath())
-                .into(posterIv);}
-        favoriteIv.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (!isExist(movie)) {
-                    addToFavourite(movie);
-                    favoriteIv.setBackgroundResource(R.drawable.star);
+        favoriteIv.setOnClickListener(v -> {
+            if (!isExist(movie)) {
+                addToFavourite(movie);
+                favoriteIv.setBackgroundResource(R.drawable.star);
 
-                } else {
-                    favoriteIv.setBackgroundResource(R.drawable.unstar);
+            } else {
+                favoriteIv.setBackgroundResource(R.drawable.unstar);
 
-                    removeFromFavourites(movie.getId());
-                    Toast.makeText(MovieDetails.this, "movie removed from favourites", Toast.LENGTH_LONG).show();
-                }
-
+                removeFromFavourites(movie.getId());
+                Toast.makeText(MovieDetails.this, "movie removed from favourites", Toast.LENGTH_LONG).show();
             }
+
         });
-//        Reviews adapter = new Reviews(this, reviewList);
-//        mReviewsListView.setAdapter(adapter);
-//        Trailers adapters = new Trailers(this, videoList);
-//        mTrailersListView.setAdapter(adapters);
+
+
     }
 
     private void initializeUI() {
@@ -124,8 +154,43 @@ boolean isExist;
         favoriteIv = mBinding.favouriteIv;
         mReviewsListView = mBinding.rev;
         mTrailersListView = mBinding.vid;
+trailers=mBinding.textView4;
+reviews=mBinding.textView6;
+    }
+
+
+    private void loadReviewAndTrailer(int id) {
+        mInterface = RetrofitClient.getClient().create(MoviesInterface.class);
+
+
+        Observable.zip(mInterface.getReview(id), mInterface.getTrailer(id), (reviewList, videoList) -> {
+            ReviewAndVideos reviewAndVideos = new ReviewAndVideos();
+//                        mReviewsList = reviewList.getResults();
+//                        mVideoList = videoList.getResults();
+            reviewAndVideos.setReviewList(reviewList);
+            reviewAndVideos.setVideoList(videoList);
+            return reviewAndVideos;
+        }).observeOn(AndroidSchedulers.mainThread())
+                .subscribeOn(Schedulers.io())
+                .subscribe(this::handleResponses, this::handleError);
+    }
+
+
+    private void handleResponses(ReviewAndVideos reviewAndVideos) {
+         reviewList = reviewAndVideos.getReviewList();
+         videoList = reviewAndVideos.getVideoList();
+        Reviews adapter = new Reviews(this, reviewList);
+         mReviewsListView.setAdapter(adapter);
+        Trailers adapters = new Trailers(this, videoList);
+        mTrailersListView.setAdapter(adapters);
 
     }
+
+    private void handleError(Throwable error) {
+
+        Toast.makeText(this, "Error " + error.getMessage(), Toast.LENGTH_SHORT).show();
+    }
+
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -179,7 +244,9 @@ boolean isExist;
             e.printStackTrace();
         } finally {
             try {
-                fos.close();
+                if (fos != null) {
+                    fos.close();
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -187,59 +254,34 @@ boolean isExist;
         return directory.getAbsolutePath() + name;
     }
 
-    public class Trailers extends BaseAdapter {
 
-        private Context mContext;
-        private LayoutInflater mInflater;
-        private VideoList mDataSource;
+    private static class TrailersViewHolder {
+        private View view;
 
-        public Trailers(Context context, VideoList items) {
-            mContext = context;
-            mDataSource = items;
-            mInflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        }
+        private TrailersItemsBinding binding;
 
-        @Override
-        public int getCount() {
-            return mDataSource.getResults().size();
-        }
-
-        @Override
-        public Object getItem(int position) {
-            return null;
-        }
-
-        @Override
-        public long getItemId(int position) {
-            return 0;
-        }
-
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            View rowView = mInflater.inflate(R.layout.trailers_items, parent, false);
-            TrailersItemsBinding mBinding;
-
-            mBinding = DataBindingUtil.setContentView(MovieDetails.this, R.layout.trailers_items);
-            TextView tv = mBinding.trailer;
-            tv.setText("Trailer " + position);
-            return rowView;
+        TrailersViewHolder(TrailersItemsBinding binding) {
+            this.view = binding.getRoot();
+            this.binding = binding;
         }
     }
 
-    public class Reviews extends BaseAdapter {
-        private Context mContext;
-        private LayoutInflater mInflater;
-        private ReviewList mDataSource;
 
-        public Reviews(Context context, ReviewList items) {
+    public class Trailers extends BaseAdapter {
+
+        private Context mContext;
+        private VideoList mDataSource;
+
+        private Trailers(Context context, VideoList items) {
             mContext = context;
             mDataSource = items;
-            mInflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         }
 
         @Override
         public int getCount() {
-            return mDataSource.getResults().size();
+            if(mDataSource!=null){
+            return mDataSource.getResults().size();}
+            else return 0;
         }
 
         @Override
@@ -254,21 +296,124 @@ boolean isExist;
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
-            View rowView = mInflater.inflate(R.layout.review_item, parent, false);
-            ReviewItemBinding mBinding;
-            mBinding = DataBindingUtil.setContentView(MovieDetails.this, R.layout.review_item);
-            TextView nameTv = mBinding.name;
-            TextView reviewTv = mBinding.review;
-            nameTv.setText(mDataSource.getResults().get(position).getAuthor());
-            reviewTv.setText(mDataSource.getResults().get(position).getContent());
-            return rowView;
+
+
+
+            TrailersViewHolder  trailersViewHolder;
+
+            if (convertView == null) {
+                TrailersItemsBinding itemBinding = DataBindingUtil.inflate(LayoutInflater.from(parent.getContext()), R.layout.trailers_items, parent, false);
+
+                trailersViewHolder = new TrailersViewHolder(itemBinding);
+                trailersViewHolder.view = itemBinding.getRoot();
+                trailersViewHolder.view.setTag(trailersViewHolder);
+            }
+            else {
+                trailersViewHolder = (TrailersViewHolder) convertView.getTag();
+            }
+            trailersViewHolder.binding.trailer.setText(mDataSource.getResults().get(position).getName());
+            trailersViewHolder.view.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://www.youtube.com/watch?v=" + mDataSource.getResults().get(position).getKey()));
+                    mContext.startActivity(intent);
+                }
+            });
+            return trailersViewHolder.view;
+        }
+        protected void loadData(VideoList items) {
+            mDataSource = items;
+            notifyDataSetChanged();
+        }
+
+    }
+
+
+
+    private static class ReviewsViewHolder {
+        private View view;
+
+        private ReviewItemBinding binding;
+
+        ReviewsViewHolder(ReviewItemBinding binding) {
+            this.view = binding.getRoot();
+            this.binding = binding;
+        }
+    }
+
+
+    public class Reviews extends BaseAdapter {
+        private ReviewList mDataSource;
+
+        private Reviews(Context context, ReviewList items) {
+            mDataSource = items;
+        }
+
+        @Override
+        public int getCount() {
+            if(mDataSource!=null){
+            return mDataSource.getResults().size();}
+            else return 0;
+        }
+
+        @Override
+        public Object getItem(int position) {
+            return null;
+        }
+
+        @Override
+        public long getItemId(int position) {
+            return 0;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+
+            ReviewsViewHolder  reviewsViewHolder;
+            if (convertView == null) {
+                ReviewItemBinding itemBinding = DataBindingUtil.inflate(LayoutInflater.from(parent.getContext()), R.layout.review_item, parent, false);
+
+                reviewsViewHolder = new ReviewsViewHolder(itemBinding);
+                reviewsViewHolder.view = itemBinding.getRoot();
+                reviewsViewHolder.view.setTag(reviewsViewHolder);
+            }
+            else {
+                reviewsViewHolder = (ReviewsViewHolder) convertView.getTag();
+            }
+            reviewsViewHolder.binding.name.setText(mDataSource.getResults().get(position).getAuthor());
+            reviewsViewHolder.binding.review.setText(mDataSource.getResults().get(position).getContent());
+
+
+            return reviewsViewHolder.view;
+        }
+        protected void loadData(ReviewList items) {
+            mDataSource = items;
+            notifyDataSetChanged();
         }
     }
 
     private boolean isExist(Result movie) {
         Cursor c = getContentResolver().query(CONTENT_URI, null, COLUMN_NAME_ID + " = " + movie.getId(), null, null);
-        if (c.getCount() == 0) {
-            return false;
-        } else return true;
+        if (c != null) {
+            if (c.getCount() == 0) {
+                return false;
+            }
+        }
+        if (c != null) {
+            c.close();
+        }
+        return true;
+    }
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putParcelable(REVIEW_KEY, reviewList);
+        outState.putParcelable(VIDEO_KEY, videoList);
+
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
     }
 }

@@ -7,9 +7,6 @@ import  com.example.alfa.popularmovies.data.MoviesContract.MovieEntry;
 
 import static com.example.alfa.popularmovies.data.MoviesContract.MovieEntry.TABLE_NAME;
 
-/**
- * Created by Alfa on 3/25/2018.
- */
 
 public class FavouritesDbHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "movies.db";
