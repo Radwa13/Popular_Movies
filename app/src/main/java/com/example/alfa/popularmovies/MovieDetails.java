@@ -15,6 +15,8 @@ import android.support.v4.app.NavUtils;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -31,6 +33,7 @@ import com.example.alfa.popularmovies.databinding.TrailersItemsBinding;
 import com.example.alfa.popularmovies.model.Result;
 import com.example.alfa.popularmovies.model.ReviewAndVideos;
 import com.example.alfa.popularmovies.model.ReviewList;
+import com.example.alfa.popularmovies.model.Video;
 import com.example.alfa.popularmovies.model.VideoList;
 import com.jakewharton.retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import com.squareup.picasso.Picasso;
@@ -55,21 +58,20 @@ import static com.example.alfa.popularmovies.data.MoviesContract.MovieEntry.COLU
 import static com.example.alfa.popularmovies.data.MoviesContract.MovieEntry.CONTENT_URI;
 
 
-public class MovieDetails extends AppCompatActivity {
+public class MovieDetails extends AppCompatActivity implements TrailersAdapter.ListItemClickListner{
     private TextView titleTv, overviewTv, ratingTv, dateTv;
     private ImageView posterIv, favoriteIv;
     private boolean isExist;
-    ListView mReviewsListView;
-    ListView mTrailersListView;
+    private ListView mReviewsListView;
+    private RecyclerView mTrailersListView;
     private Reviews reviewsAdapter;
-    private Trailers trailersAdapter;
-   private ReviewList reviewList ;
-    private VideoList videoList ;
+    private ReviewList reviewList;
+    private VideoList videoList;
     private MoviesInterface mInterface;
     private final String REVIEW_KEY = "rKey";
     private final String VIDEO_KEY = "vKey";
-    TextView trailers,reviews;
-
+    TextView trailers, reviews;
+    TrailersAdapter trailersAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,21 +82,27 @@ public class MovieDetails extends AppCompatActivity {
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
         initializeUI();
+
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
+        mTrailersListView.setLayoutManager(layoutManager);
         Intent intent = getIntent();
         Result movie = intent.getParcelableExtra("movie");
 
 
-        if (savedInstanceState != null && savedInstanceState.containsKey(REVIEW_KEY)&& savedInstanceState.containsKey(VIDEO_KEY)) {
+        if (savedInstanceState != null && savedInstanceState.containsKey(REVIEW_KEY) && savedInstanceState.containsKey(VIDEO_KEY)) {
             videoList = savedInstanceState.getParcelable(VIDEO_KEY);
-             reviewList = savedInstanceState.getParcelable(REVIEW_KEY);
-            reviewsAdapter = new Reviews(this,reviewList);
-            trailersAdapter  = new Trailers(this, videoList);
+            reviewList = savedInstanceState.getParcelable(REVIEW_KEY);
+            reviewsAdapter = new Reviews(this, reviewList);
+
+
+            trailersAdapter  = new TrailersAdapter(this, this,videoList.getResults());
             mTrailersListView.setAdapter(trailersAdapter);
             mReviewsListView.setAdapter(reviewsAdapter);
 
+
+        } else {
+            loadReviewAndTrailer(movie.getId());
         }
-        else {
-        loadReviewAndTrailer(movie.getId());}
         isExist = isExist(movie);
         if (isExist) {
             favoriteIv.setBackgroundResource(R.drawable.star);
@@ -106,10 +114,10 @@ public class MovieDetails extends AppCompatActivity {
         dateTv.setText(movie.getReleaseDate());
         String getType = MainActivity.sharedPreferences.getString(getString(R.string.pref_key), getString(R.string.pref_popular));
         if (getType.equals(getString(R.string.pref_favourite))) {
-mReviewsListView.setVisibility(View.GONE);
-mTrailersListView.setVisibility(View.GONE);
-trailers.setVisibility(View.GONE);
-reviews.setVisibility(View.GONE);
+            mReviewsListView.setVisibility(View.GONE);
+            mTrailersListView.setVisibility(View.GONE);
+            trailers.setVisibility(View.GONE);
+            reviews.setVisibility(View.GONE);
 
             File f = new File(movie.getPosterPath());
             Bitmap b = null;
@@ -154,8 +162,8 @@ reviews.setVisibility(View.GONE);
         favoriteIv = mBinding.favouriteIv;
         mReviewsListView = mBinding.rev;
         mTrailersListView = mBinding.vid;
-trailers=mBinding.textView4;
-reviews=mBinding.textView6;
+        trailers = mBinding.textView4;
+        reviews = mBinding.textView6;
     }
 
 
@@ -177,12 +185,12 @@ reviews=mBinding.textView6;
 
 
     private void handleResponses(ReviewAndVideos reviewAndVideos) {
-         reviewList = reviewAndVideos.getReviewList();
-         videoList = reviewAndVideos.getVideoList();
+        reviewList = reviewAndVideos.getReviewList();
+        videoList = reviewAndVideos.getVideoList();
         Reviews adapter = new Reviews(this, reviewList);
-         mReviewsListView.setAdapter(adapter);
-        Trailers adapters = new Trailers(this, videoList);
-        mTrailersListView.setAdapter(adapters);
+        mReviewsListView.setAdapter(adapter);
+         trailersAdapter = new TrailersAdapter(this, this,videoList.getResults());
+        mTrailersListView.setAdapter(trailersAdapter);
 
     }
 
@@ -254,6 +262,12 @@ reviews=mBinding.textView6;
         return directory.getAbsolutePath() + name;
     }
 
+    @Override
+    public void onClick(int position) {
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://www.youtube.com/watch?v=" + videoList.getResults().get(position).getKey()));
+       startActivity(intent);
+    }
+
 
     private static class TrailersViewHolder {
         private View view;
@@ -266,67 +280,6 @@ reviews=mBinding.textView6;
         }
     }
 
-
-    public class Trailers extends BaseAdapter {
-
-        private Context mContext;
-        private VideoList mDataSource;
-
-        private Trailers(Context context, VideoList items) {
-            mContext = context;
-            mDataSource = items;
-        }
-
-        @Override
-        public int getCount() {
-            if(mDataSource!=null){
-            return mDataSource.getResults().size();}
-            else return 0;
-        }
-
-        @Override
-        public Object getItem(int position) {
-            return null;
-        }
-
-        @Override
-        public long getItemId(int position) {
-            return 0;
-        }
-
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-
-
-
-            TrailersViewHolder  trailersViewHolder;
-
-            if (convertView == null) {
-                TrailersItemsBinding itemBinding = DataBindingUtil.inflate(LayoutInflater.from(parent.getContext()), R.layout.trailers_items, parent, false);
-
-                trailersViewHolder = new TrailersViewHolder(itemBinding);
-                trailersViewHolder.view = itemBinding.getRoot();
-                trailersViewHolder.view.setTag(trailersViewHolder);
-            }
-            else {
-                trailersViewHolder = (TrailersViewHolder) convertView.getTag();
-            }
-            trailersViewHolder.binding.trailer.setText(mDataSource.getResults().get(position).getName());
-            trailersViewHolder.view.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://www.youtube.com/watch?v=" + mDataSource.getResults().get(position).getKey()));
-                    mContext.startActivity(intent);
-                }
-            });
-            return trailersViewHolder.view;
-        }
-        protected void loadData(VideoList items) {
-            mDataSource = items;
-            notifyDataSetChanged();
-        }
-
-    }
 
 
 
@@ -351,9 +304,9 @@ reviews=mBinding.textView6;
 
         @Override
         public int getCount() {
-            if(mDataSource!=null){
-            return mDataSource.getResults().size();}
-            else return 0;
+            if (mDataSource != null) {
+                return mDataSource.getResults().size();
+            } else return 0;
         }
 
         @Override
@@ -369,15 +322,14 @@ reviews=mBinding.textView6;
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
 
-            ReviewsViewHolder  reviewsViewHolder;
+            ReviewsViewHolder reviewsViewHolder;
             if (convertView == null) {
                 ReviewItemBinding itemBinding = DataBindingUtil.inflate(LayoutInflater.from(parent.getContext()), R.layout.review_item, parent, false);
 
                 reviewsViewHolder = new ReviewsViewHolder(itemBinding);
                 reviewsViewHolder.view = itemBinding.getRoot();
                 reviewsViewHolder.view.setTag(reviewsViewHolder);
-            }
-            else {
+            } else {
                 reviewsViewHolder = (ReviewsViewHolder) convertView.getTag();
             }
             reviewsViewHolder.binding.name.setText(mDataSource.getResults().get(position).getAuthor());
@@ -386,6 +338,7 @@ reviews=mBinding.textView6;
 
             return reviewsViewHolder.view;
         }
+
         protected void loadData(ReviewList items) {
             mDataSource = items;
             notifyDataSetChanged();
@@ -404,6 +357,7 @@ reviews=mBinding.textView6;
         }
         return true;
     }
+
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);

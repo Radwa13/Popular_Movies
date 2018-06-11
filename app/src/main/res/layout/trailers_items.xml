@@ -1,29 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layout xmlns:android="http://schemas.android.com/apk/res/android">
     <RelativeLayout
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:padding="5dp"
-        android:weightSum="2">
+    >
 
+        <FrameLayout
+            android:layout_width="200dp"
+            android:id="@+id/posterFrame"
+            android:layout_height="150dp"
+            android:background="@android:color/black"
+            >
         <ImageView
             android:id="@+id/moviePosterIV"
-            android:layout_width="25dp"
-            android:layout_height="55dp"
-            android:layout_margin="5dp"
+            android:layout_width="200dp"
+            android:layout_height="150dp"
             android:src="@drawable/play"
+            android:layout_margin="5dp"
+            android:layout_gravity="center"
             android:layout_alignParentTop="true"
             android:layout_centerVertical="true"
             android:contentDescription="@string/image_desc"
             />
-
+        </FrameLayout>
         <TextView
             android:id="@+id/trailer"
-            android:layout_width="wrap_content"
+            android:layout_width="200dp"
             android:layout_height="wrap_content"
-            android:layout_alignBaseline="@+id/moviePosterIV"
-            android:layout_centerVertical="true"
-            android:layout_toRightOf="@+id/moviePosterIV"            android:gravity="center_horizontal"
+         android:layout_below="@+id/posterFrame"
   />
     </RelativeLayout>
 
